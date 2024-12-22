@@ -1,0 +1,88 @@
+svg_Progress_Status = 
+//Author: Maxim Anatsko || https://maxanatsko.com
+
+//Core measure
+VAR _measure = [% Completion]
+
+// Size variables
+VAR _width = 64
+VAR _height = 64
+
+//Colors
+VAR _redColor = "#ff0000"
+VAR _yellowColor = "#fedb00"
+VAR _greenColor = "#8cb400"
+VAR _greyColor = "#E0E0E0"
+
+// Shared variables
+VAR _centerX = 20
+VAR _centerY = 20
+VAR _radius = 15
+VAR _strokeWidth = 4
+
+VAR _percentage = 
+    MAX( 
+        ROUNDDOWN( _measure, 2), 
+        0 
+    )
+
+// Color logic
+VAR _statusColor = 
+    SWITCH(
+        TRUE(),
+        _percentage >= 0.9, _greenColor,  // >= 90% green
+        _percentage >= 0.7, _yellowColor,  // >= 70% yellow
+        _redColor                       // < 70% red
+    )
+
+//Text variables
+VAR _fontFamily = "Segoe%20UI"
+VAR _fontSize = 10
+
+// Progress state variables
+VAR _circumference = 2 * PI() * _radius
+VAR _dashArray = FORMAT(_circumference * _percentage, "0.##") & " " & FORMAT(_circumference, "0.##")
+VAR _displayText = FORMAT(_percentage * 100, "0") & "%25"
+
+VAR _progressSvg =
+"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='" & _width & "' height='" & _height & "' viewBox='0 0 40 40'%3E" &
+    "%3Ccircle cx='" & _centerX & "' cy='" & _centerY & "' r='" & _radius &
+    "' fill='none' stroke='" & _greyColor & "' stroke-width='" & _strokeWidth & "'/%3E" &
+    "%3Ccircle cx='" & _centerX & "' cy='" & _centerY & "' r='" & _radius &
+    "' fill='none' stroke='" & _statusColor & "' stroke-width='" & _strokeWidth &
+    "' stroke-dasharray='" & _dashArray & "' transform='rotate(-90 " & _centerX & " " & _centerY & ")'/%3E" &
+    "%3Ctext x='" & _centerX & "' y='" & _centerY &
+    "' text-anchor='middle' dominant-baseline='middle' font-family='" & _fontFamily &
+    "' font-size='" & _fontSize & "'%3E" &
+    _displayText & "%3C/text%3E" &
+"%3C/svg%3E"
+
+// Checkmark path for complete state
+VAR _checkPath =
+    "M" & FORMAT(_centerX - 5, "0") & " " & FORMAT(_centerY, "0") &
+    " L" & FORMAT(_centerX - 1, "0") & " " & FORMAT(_centerY + 4, "0") &
+    " L" & FORMAT(_centerX + 5, "0") & " " & FORMAT(_centerY - 4, "0")
+
+// Complete state SVG
+VAR _completeSvg =
+"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='" & _width & "' height='" & _height & "' viewBox='0 0 40 40'%3E" &
+    "%3Ccircle cx='" & _centerX & "' cy='" & _centerY & "' r='" & _radius &
+    "' fill='" & _greenColor & "' stroke='none'/%3E" &
+    "%3Cpath d='" & _checkPath &
+    "' stroke='white' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E" &
+"%3C/svg%3E"
+// Determine which state to show
+
+VAR _isComplete =
+    IF(
+        _measure >= 1,
+        TRUE(),
+        FALSE()
+    )
+    
+RETURN
+    IF(
+        _isComplete,
+        _completeSvg,
+        _progressSvg
+    )
