@@ -1,0 +1,44 @@
+SVG | Progress Column Chart = 
+	VAR _value = [% Completion] //<--- INSERT YOUR MEASURE HERE
+    
+	// Dynamic Sizing
+	VAR _cellWidth = 25
+	VAR _cellHeight = 100
+	VAR _svgWidth = _cellWidth
+	VAR _svgHeight = _cellHeight * 0.9 // Leave some padding
+	VAR _barWidth = _svgWidth * 0.4 // Make bars 40% of cell width
+	VAR _barHeight = _svgHeight * 0.8 // Bar fills 80% of available height
+	VAR _circleSize = _cellHeight * 0.1 // Adjusted for new icon
+	VAR _iconGap = _cellHeight * 0.04 // 2px gap
+
+	// Dynamic Border Radius
+	VAR _borderRadius = MIN(_barWidth, _barHeight) * 0.5 // 20% of the smallest dimension
+
+	// Colors
+	VAR _colorBackground = "%234F4F4F" // Dark gray for background
+	VAR _colorOverlayIncomplete = "%236B6B6B" // Grayish fill for incomplete progress
+	VAR _colorOverlayComplete = "%235EB571" // Green for complete progress
+	VAR _overlayColor = IF(_value >= 1, _colorOverlayComplete, _colorOverlayIncomplete)
+
+	// Ensure bars stick to the bottom
+	VAR _overlayHeight = _barHeight * _value
+	VAR _overlayY = (_svgHeight - _overlayHeight) // Position overlay to grow from the bottom
+
+	// SVG Base
+	VAR _svgStart = "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='" & _svgWidth & "'%20height='" & _svgHeight & "'%20viewBox='0%200%20" & _svgWidth & "%20" & _svgHeight & "'%3E"
+	VAR _rectBackground = "%3Crect%20x='" & ((_svgWidth - _barWidth) / 2) & "'%20y='" & (_svgHeight - _barHeight) & "'%20width='" & _barWidth & "'%20height='" & _barHeight & "'%20fill='" & _colorBackground & "'%20rx='" & _borderRadius & "'%20ry='" & _borderRadius & "'/%3E"
+	VAR _rectOverlay = "%3Crect%20x='" & ((_svgWidth - _barWidth) / 2) & "'%20y='" & _overlayY & "'%20width='" & _barWidth & "'%20height='" & _overlayHeight & "'%20fill='" & _overlayColor & "'%20rx='" & _borderRadius & "'%20ry='" & _borderRadius & "'/%3E"
+
+	// Checkmark Icon (for 100% completion)
+	VAR _checkmarkIcon = IF(
+		_value >= 1,
+		"%3Csvg%20x='" & (_svgWidth/2 - _circleSize/2) & "'%20y='" & (_iconGap) & "'%20width='" & _circleSize & "'%20height='" & _circleSize & "'%20viewBox='0%200%2028%2028'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3E" &
+		"%3Cpath%20d='M6.65263%2014.0304C6.29251%2013.6703%206.29251%2013.0864%206.65263%2012.7263C7.01276%2012.3662%207.59663%2012.3662%207.95676%2012.7263L11.6602%2016.4297L19.438%208.65183C19.7981%208.29171%2020.382%208.29171%2020.7421%208.65183C21.1023%209.01195%2021.1023%209.59583%2020.7421%209.95596L12.3667%2018.3314C11.9762%2018.7219%2011.343%2018.7219%2010.9525%2018.3314L6.65263%2014.0304Z'%20fill='" & _colorOverlayComplete & "'/%3E" &
+		"%3Cpath%20clip-rule='evenodd'%20d='M14%201C6.8203%201%201%206.8203%201%2014C1%2021.1797%206.8203%2027%2014%2027C21.1797%2027%2027%2021.1797%2027%2014C27%206.8203%2021.1797%201%2014%201ZM3%2014C3%207.92487%207.92487%203%2014%203C20.0751%203%2025%207.92487%2025%2014C25%2020.0751%2020.0751%2025%2014%2025C7.92487%2025%203%2020.0751%203%2014Z'%20fill='" & _colorOverlayComplete & "'%20fill-rule='evenodd'/%3E%3C/svg%3E",
+		""
+	)
+
+	VAR _svgEnd = "%3C/svg%3E"
+
+RETURN
+	_svgStart & _rectBackground & _rectOverlay & _checkmarkIcon & _svgEnd
