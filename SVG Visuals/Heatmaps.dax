@@ -1,8 +1,10 @@
 SVG | Rounded Square Heatmap = 
 VAR _sales = [Sales vs Target]
+
 -- Get min/max values separately for positive and negative numbers
 VAR _minSales = MINX(ALLSELECTED('sales-data'), [Sales vs Target]) -- Smallest negative
 VAR _maxSales = MAXX(ALLSELECTED('sales-data'), [Sales vs Target]) -- Largest positive
+
 -- Toggles (Ensure they are set as 1 (TRUE) or 0 (FALSE))
 VAR _separateScaling = 1  -- 1 = Separate scaling for positive/negative, 0 = Unified absolute scaling
 VAR _useGradient = 1  -- 1 = Gradient-based color, 0 = Static color (Red/Green)
