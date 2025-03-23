@@ -1,0 +1,91 @@
+SVG | Rounded Square Heatmap (Gradient, Text) = 
+VAR _sales = [Sales vs Target]
+-- Get min/max values separately for positive and negative numbers
+VAR _minSales = MINX(ALLSELECTED('sales-data'), [Sales vs Target]) -- Smallest negative
+VAR _maxSales = MAXX(ALLSELECTED('sales-data'), [Sales vs Target]) -- Largest positive
+-- Toggles (Ensure they are set as 1 (TRUE) or 0 (FALSE))
+VAR _separateScaling = 1  -- 1 = Separate scaling for positive/negative, 0 = Unified absolute scaling
+VAR _useGradient = 1  -- 1 = Gradient-based color, 0 = Static color (Red/Green)
+VAR _useSizeScaling = 0  -- 1 = Size changes based on value, 0 = All squares have the same size
+VAR _showText = 1  -- 1 = Show text value on square, 0 = Hide text
+VAR _textColor = "%23FFFFFF"  -- Text color in hex format (encoded with %23 instead of #)
+
+-- Define a fixed viewport size (ensures alignment)
+VAR _viewBoxSize = 50  
+-- Define square size range with a safe margin
+VAR _minSize = 5  -- Smallest square size
+VAR _maxSize = _viewBoxSize * 0.8  -- Max size at 80% of viewport to prevent overflow
+VAR _fixedSize = _viewBoxSize * 0.8  -- Fixed size when size scaling is disabled
+-- Adjust scaling factors to prevent small green squares
+VAR _positiveScale = IF(_maxSales > 0, _maxSales - 0, 1)  -- Normalize to start from zero
+VAR _negativeScale = IF(_minSales < 0, ABS(_minSales - 0), 1)  -- Normalize to start from zero
+-- Compute the scaled size using SWITCH() with integer comparisons
+VAR _scaledSize =
+    SWITCH(
+        TRUE(),
+        _useSizeScaling = 0, _fixedSize,  -- Fixed size when size scaling is off
+        _separateScaling = 1 && _sales >= 0, _minSize + (_sales / _positiveScale) * (_maxSize - _minSize),  -- Separate scaling for positives
+        _separateScaling = 1 && _sales < 0, _minSize + (ABS(_sales) / _negativeScale) * (_maxSize - _minSize),  -- Separate scaling for negatives
+        _minSize + (ABS(_sales) / MAX(ABS(_minSales), ABS(_maxSales))) * (_maxSize - _minSize)  -- Default: unified absolute scaling
+    )
+-- Ensure the square size never exceeds viewport limits
+VAR _finalSize = MIN(_scaledSize, _maxSize)
+-- Calculate positioning to center the square
+VAR _offset = (_viewBoxSize - _finalSize) / 2
+-- Define corner radius (adjustable)
+VAR _cornerRadius = _finalSize * 0.1  -- 10% of square size for proportional rounding
+----------------------------------
+-- Color Gradient Logic
+----------------------------------
+-- Calculate gradient intensity (0 → 1 range)
+VAR _intensity =
+    IF(
+        _sales >= 0,
+        DIVIDE(_sales, _maxSales, 0),  -- Normalize positive intensity (0 to 1)
+        DIVIDE(ABS(_sales), ABS(_minSales), 0)  -- Normalize negative intensity (0 to 1)
+    )
+-- Compute the color using SWITCH() with integer comparisons
+VAR _color = SWITCH(
+    TRUE(),
+    _useGradient = 0 && _sales >= 0, "%238CB400",  -- Static green if gradient is disabled
+    _useGradient = 0 && _sales < 0, "%23FF0000",  -- Static red if gradient is disabled
+    _sales >= 0, FORMAT("rgb(" &
+                ROUND(200 - (200 - 140) * _intensity, 0) & "," &
+                ROUND(230 - (230 - 180) * _intensity, 0) & "," &
+                ROUND(140 - (140 - 0) * _intensity, 0) & ")", ""),
+    FORMAT("rgb(" &
+                ROUND(255 - (255 - 255) * _intensity, 0) & "," &
+                ROUND(180 - (180 - 0) * _intensity, 0) & "," &
+                ROUND(180 - (180 - 0) * _intensity, 0) & ")", "")
+)
+
+----------------------------------
+-- Text Formatting Logic
+----------------------------------
+-- Format the text content with 0 decimal place
+VAR _formattedValue = FORMAT(_sales, "0")
+-- Text color is already properly encoded in the _textColor variable
+VAR _encodedTextColor = _textColor
+-- Adaptive font size based on square size - smaller for longer text
+VAR _textLength = LEN(_formattedValue)
+VAR _fontSize = _finalSize * 0.3 * SWITCH(TRUE(), _textLength > 5, 0.7, _textLength > 3, 0.85, 1)
+
+-- Text SVG element with proper centering
+VAR _textElement = 
+    IF(_showText = 1, 
+        "%3Ctext x='" & _viewBoxSize/2 & "' y='" & _viewBoxSize/2 & 
+        "' text-anchor='middle' dominant-baseline='middle' " &
+        "font-family='Segoe%20UI,Arial,sans-serif' fill='" & _encodedTextColor & "' " &
+        "font-size='" & _fontSize & "' font-weight='bold'%3E" & _formattedValue & "%3C/text%3E",
+        ""  -- Return empty string if text should not be displayed
+    )
+
+-- Generate SVG with centering, scaling, gradient color, and optional text
+VAR _svg =
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='" & _viewBoxSize &
+    "' height='" & _viewBoxSize & "' viewBox='0 0 " & _viewBoxSize & " " & _viewBoxSize & "'%3E" &
+    "%3Crect x='" & _offset & "' y='" & _offset & "' width='" & _finalSize &
+    "' height='" & _finalSize & "' rx='" & _cornerRadius & "' ry='" & _cornerRadius &
+    "' fill='" & _color & "'/%3E" & _textElement & "%3C/svg%3E"
+
+RETURN _svg
