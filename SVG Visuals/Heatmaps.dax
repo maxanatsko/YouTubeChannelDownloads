@@ -1,4 +1,4 @@
-SVG | Rounded Square Heatmap (Gradient, Text) = 
+SVG | Rounded Square Heatmap = 
 VAR _sales = [Sales vs Target]
 -- Get min/max values separately for positive and negative numbers
 VAR _minSales = MINX(ALLSELECTED('sales-data'), [Sales vs Target]) -- Smallest negative
