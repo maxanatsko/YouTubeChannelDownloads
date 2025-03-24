@@ -1,0 +1,149 @@
+SVG | Circle Arrow Heatmap = 
+VAR _sales = [Sales vs Target]
+
+-- Get min/max values separately for positive and negative numbers
+VAR _minSales = MINX(ALLSELECTED('sales-data'), [Sales vs Target]) -- Smallest negative
+VAR _maxSales = MAXX(ALLSELECTED('sales-data'), [Sales vs Target]) -- Largest positive
+
+-- Toggles (Ensure they are set as 1 (TRUE) or 0 (FALSE))
+VAR _separateScaling = 1  -- 1 = Separate scaling for positive/negative, 0 = Unified absolute scaling
+VAR _useGradient = 0  -- 1 = Gradient-based color, 0 = Static color (Red/Green)
+VAR _useSizeScaling = 0  -- 1 = Size changes based on value, 0 = All circles have the same size
+VAR _useTriangleStyle = 0  -- 0 = Chevron style, 1 = Triangle style
+VAR _iconColor = "%23FFFFFF"  -- Icon color in hex format (encoded with %23 instead of #)
+VAR _borderWidth = 5  -- Border width (thicker like in original)
+VAR _yOffset = 2  -- Vertical offset for the chevron/triangle (positive = down)
+
+-- Define a fixed viewport size (ensures alignment)
+VAR _viewBoxSize = 100  -- Larger viewBox for better precision
+
+-- Define circle size range with a safe margin
+VAR _minSize = 40  -- Smallest circle diameter
+VAR _maxSize = _viewBoxSize * 0.9  -- Max size at 90% of viewport to prevent overflow
+VAR _fixedSize = _viewBoxSize * 0.9  -- Fixed size when size scaling is disabled
+
+-- Determine direction (up/down)
+VAR _isPositive = _sales >= 0
+
+-- Adjust scaling factors
+VAR _positiveScale = IF(_maxSales > 0, _maxSales, 1)
+VAR _negativeScale = IF(_minSales < 0, ABS(_minSales), 1)
+
+-- Compute the scaled size
+VAR _scaledSize =
+    SWITCH(
+        TRUE(),
+        _useSizeScaling = 0, _fixedSize,
+        _separateScaling = 1 && _isPositive, _minSize + (_sales / _positiveScale) * (_maxSize - _minSize),
+        _separateScaling = 1 && NOT(_isPositive), _minSize + (ABS(_sales) / _negativeScale) * (_maxSize - _minSize),
+        _minSize + (ABS(_sales) / MAX(ABS(_minSales), ABS(_maxSales))) * (_maxSize - _minSize)
+    )
+
+-- Ensure the circle size never exceeds viewport limits
+VAR _finalSize = MIN(_scaledSize, _maxSize)
+
+----------------------------------
+-- Color Gradient Logic
+----------------------------------
+-- Calculate gradient intensity (0 → 1 range)
+VAR _intensity =
+    IF(
+        _isPositive,
+        DIVIDE(_sales, _maxSales, 0),
+        DIVIDE(ABS(_sales), ABS(_minSales), 0)
+    )
+
+-- Compute the color using SWITCH() with integer comparisons
+VAR _color = SWITCH(
+    TRUE(),
+    _useGradient = 0 && _isPositive, "%2340C057",  -- Static green if gradient is disabled
+    _useGradient = 0 && NOT(_isPositive), "%23E03131",  -- Static red if gradient is disabled (adjusted to match Image 2)
+    _isPositive, FORMAT("rgb(" &
+                ROUND(64 - (64 - 20) * _intensity, 0) & "," &
+                ROUND(192 - (192 - 150) * _intensity, 0) & "," &
+                ROUND(87 - (87 - 40) * _intensity, 0) & ")", ""),  -- Green gradient
+    FORMAT("rgb(" &
+                ROUND(224 - (224 - 180) * _intensity, 0) & "," &
+                ROUND(49 - (49 - 30) * _intensity, 0) & "," &
+                ROUND(49 - (49 - 30) * _intensity, 0) & ")", "")  -- Red gradient (adjusted to match Image 2)
+)
+
+-- Center point for the viewBox
+VAR _centerX = _viewBoxSize / 2
+VAR _centerY = _viewBoxSize / 2
+VAR _radius = _finalSize / 2
+
+-- Icon size - scaled based on circle size
+VAR _iconWidth = _finalSize * 0.5  -- Width of icon
+VAR _iconHeight = _finalSize * 0.25  -- Height of icon
+VAR _strokeWidth = _finalSize * 0.1  -- Thickness of chevron stroke
+VAR _strokeColor = "%23FFFFFF"
+
+----------------------------------
+-- Icon Paths with Y-Offset
+----------------------------------
+-- Apply offset to all Y coordinates (adjusted based on positive/negative direction)
+VAR _effectiveOffset = IF(_isPositive, -_yOffset, _yOffset)  -- Invert offset for positive values
+
+-- Triangle style with Y offset
+VAR _trianglePath = 
+    "M" & (_centerX - _iconWidth/2) & "," & (_centerY - _iconHeight/2 + _effectiveOffset) & 
+    " L" & _centerX & "," & (_centerY + _iconHeight/2 + _effectiveOffset) & 
+    " L" & (_centerX + _iconWidth/2) & "," & (_centerY - _iconHeight/2 + _effectiveOffset) & 
+    " Z"
+
+-- Chevron style with Y offset
+VAR _chevronPath = 
+    "M" & (_centerX - _iconWidth/2) & "," & (_centerY - _iconHeight/2 + _effectiveOffset) & 
+    " L" & _centerX & "," & (_centerY + _iconHeight/2 + _effectiveOffset) & 
+    " L" & (_centerX + _iconWidth/2) & "," & (_centerY - _iconHeight/2 + _effectiveOffset)
+
+-- Select appropriate icon path based on style toggle and value direction
+VAR _iconPath = 
+    IF(_useTriangleStyle = 1,
+        _trianglePath,  -- Triangle style
+        _chevronPath    -- Chevron style
+    )
+
+-- Invert the icon for positive values (up instead of down)
+VAR _finalIconPath = 
+    IF(_isPositive,
+        -- For positive values, flip the Y coordinates (reflect about centerY)
+        SUBSTITUTE(
+            SUBSTITUTE(
+                _iconPath, 
+                (_centerY - _iconHeight/2 + _effectiveOffset), 
+                "TEMPY1"
+            ),
+            (_centerY + _iconHeight/2 + _effectiveOffset),
+            (_centerY - _iconHeight/2 + _effectiveOffset)
+        ),
+        _iconPath
+    )
+VAR _finalIconPath2 = 
+    IF(_isPositive,
+        SUBSTITUTE(
+            _finalIconPath,
+            "TEMPY1",
+            (_centerY + _iconHeight/2 + _effectiveOffset)
+        ),
+        _finalIconPath
+    )
+
+-- Generate SVG with filled circle and icon
+VAR _svg =
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='" & _viewBoxSize &
+    "' height='" & _viewBoxSize & "' viewBox='0 0 " & _viewBoxSize & " " & _viewBoxSize & "'%3E" &
+    "%3Ccircle cx='" & _centerX & "' cy='" & _centerY & "' r='" & _radius &
+    "' fill='" & _color & "' stroke='" & _strokeColor & "' stroke-width='" & _borderWidth & "'/%3E" &
+    
+    -- For chevron style, use a stroked path with rounded ends
+    IF(_useTriangleStyle = 0,
+        "%3Cpath d='" & _finalIconPath2 & "' stroke='" & _iconColor & 
+        "' stroke-width='" & _strokeWidth & "' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E",
+        "%3Cpath d='" & _finalIconPath2 & "' fill='" & _iconColor & "'/%3E"
+    ) &
+    
+    "%3C/svg%3E"
+
+RETURN _svg
