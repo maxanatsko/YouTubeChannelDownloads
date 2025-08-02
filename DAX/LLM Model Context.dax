@@ -1,0 +1,61 @@
+// TABLES
+EVALUATE
+	VAR _table = INFO.VIEW.TABLES()
+	VAR _selectedColumns = SELECTCOLUMNS(
+		_table,
+		[Name],
+		[DataCategory],
+		[Expression],
+		[StorageMode]
+	)
+	RETURN
+		_selectedColumns
+
+  // COLUMNS
+  EVALUATE
+	VAR _table = INFO.VIEW.COLUMNS()
+	VAR _selectedColumns = SELECTCOLUMNS(
+		_table,
+		[Name],
+		[Table],
+		[DataType],
+		[DataCategory],
+		[SummarizeBy],
+		[Expression]
+	)
+	RETURN
+		_selectedColumns
+
+  // MEASURES
+  EVALUATE
+	VAR _table = INFO.VIEW.MEASURES()
+	VAR _selectedColumns = SELECTCOLUMNS(
+		_table,
+		[Name],
+		[Table],
+		[DataType],
+		[Expression],
+		[DataCategory],
+		[FormatString],
+		[FormatStringDefinition]
+	)
+	RETURN
+		_selectedColumns
+
+  // RELATIONSHIPS
+  EVALUATE
+	VAR _table = INFO.VIEW.RELATIONSHIPS()
+	VAR _selectedColumns = SELECTCOLUMNS(
+		_table,
+		[Name],
+		[FromTable],
+		[FromColumn],
+		[FromCardinality],
+		[ToTable],
+		[ToColumn],
+		[ToCardinality],
+		[CrossFilteringBehavior],
+		[IsActive]
+	)
+	RETURN
+		_selectedColumns
